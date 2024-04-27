@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, request, requestUrl} from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 
@@ -14,19 +14,46 @@ export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
 
 	async onload() {
+		console.log("Loading Obsidian2Anki....");
 		await this.loadSettings();
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('dice', 'Obsidian2Anki', (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+			new Notice('Sync Data😊');
 		});
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
+		//Query Anki Data.
+		this.addCommand({
+			id: 'query-anki-data',
+			name: 'Query Anki data(Simple)',
+			callback:  async () => {
+				const action = "deckNames"
+				const version = 6
+				// const params = {deck: 'test1'}
+				console.log(JSON.stringify({action,version}))
+				const reqParam = {url: 'http://localhost:8765', body:JSON.stringify({action,version})};
+				const response = await requestUrl(reqParam).json;
+				console.log(response.result);
+			}
+		});
+		this.addCommand({
+			id: 'get-all-data',
+			name: 'Query Obsidian card data(asda)',
+			editorCallback(editor, ctx) {
+				console.log(this.app.vault.adapter.getResourcePath(editor.getSelection()));
+			}
+		});
+		
+		
+		
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
 		statusBarItemEl.setText('Status Bar Text');
+
+
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
@@ -71,7 +98,7 @@ export default class MyPlugin extends Plugin {
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
 		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
+			// console.log('click', evt);
 		});
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.

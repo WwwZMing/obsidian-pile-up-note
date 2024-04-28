@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-pile-up-note",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "It's a practice project. I want to remind myself to review the note files I didn't review seven days ago.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
@@ -12,13 +12,17 @@
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
+		"@eslint/js": "^9.1.1",
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
 		"esbuild": "0.17.3",
+		"eslint": "^8.57.0",
+		"globals": "^15.1.0",
 		"obsidian": "latest",
 		"tslib": "2.4.0",
-		"typescript": "4.7.4"
+		"typescript": "4.7.4",
+		"typescript-eslint": "^7.7.1"
 	}
 }

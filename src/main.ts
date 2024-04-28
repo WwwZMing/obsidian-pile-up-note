@@ -1,6 +1,6 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, request, requestUrl} from 'obsidian';
+import { App, ItemView, Modal, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
+const VIEW_Note_List = "My-view";
 
 interface MyPluginSettings {
 	mySetting: string;
@@ -9,100 +9,31 @@ interface MyPluginSettings {
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default'
 }
-
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
-
+	static fileList: TFile[];
 	async onload() {
-		console.log("Loading Obsidian2Anki....");
 		await this.loadSettings();
+		MyPlugin.fileList = this.app.vault.getMarkdownFiles();
+		this.registerView(
+			VIEW_Note_List,
+			(leaf) => new MyView(leaf)
+		);
+		new MyModal(this.app).open();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Obsidian2Anki', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('Sync Data😊');
+		const ribbonIconEl = this.addRibbonIcon('dice', 'History', (_evt: MouseEvent) => {
+			this.activateView();
 		});
-		// Perform additional things with the ribbon
+
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
-		//Query Anki Data.
 		this.addCommand({
-			id: 'query-anki-data',
-			name: 'Query Anki data(Simple)',
-			callback:  async () => {
-				const action = "deckNames"
-				const version = 6
-				// const params = {deck: 'test1'}
-				console.log(JSON.stringify({action,version}))
-				const reqParam = {url: 'http://localhost:8765', body:JSON.stringify({action,version})};
-				const response = await requestUrl(reqParam).json;
-				console.log(response.result);
-			}
-		});
-		this.addCommand({
-			id: 'get-all-data',
-			name: 'Query Obsidian card data(asda)',
-			editorCallback(editor, ctx) {
-				console.log(this.app.vault.adapter.getResourcePath(editor.getSelection()));
-			}
-		});
-		
-		
-		
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
+			id: 'show-history',
+			name: 'Show your file status history',
 			callback: () => {
-				new SampleModal(this.app).open();
+				new MyModal(this.app).open();
 			}
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			// console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {
@@ -116,46 +47,75 @@ export default class MyPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+	async activateView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(VIEW_Note_List);
+
+		if (leaves.length > 0) {
+			leaf = leaves[0];
+		} else {
+			const leaf = await workspace.getRightLeaf(false);
+			if (leaf)
+				leaf.setViewState({ type: VIEW_Note_List, active: true });
+		}
+		if (leaf)
+			workspace.revealLeaf(leaf);
+	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
+
+
+class MyModal extends Modal {
+	constructor(app: App){
 		super(app);
 	}
 
 	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
+		Render(this.contentEl);
 	}
-
 	onClose() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 		contentEl.empty();
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
+class MyView extends ItemView {
+	constructor(leaf: WorkspaceLeaf) {
+		super(leaf);
 	}
 
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+	getViewType() {
+		return VIEW_Note_List;
 	}
+
+	getDisplayText() {
+		return "My View";
+	}
+
+	async onOpen() {
+		const container = this.contentEl;
+		container.empty();
+		Render(container);
+	}
+
+	async onClose() {
+	}
+}
+
+export function Render(contentEl: HTMLElement): void {
+	const left = contentEl.createEl("div");
+	left.createEl("div", { text: "最近7天创建的笔记：" ,cls:"Create"});
+	const right = contentEl.createEl("div");
+	right.createEl("div", { text: "最近7天更新的笔记：" ,cls:"Modify"});
+	MyPlugin.fileList.forEach((file)=> {
+		const standard = Date.now();
+		if (standard - file.stat.ctime <= 604800000)
+			left.createEl("div", { text: file.name })
+				.onClickEvent(async ()=> {await this.app.workspace.getLeaf().openFile(file);});
+		if (standard - file.stat.mtime >= 604800000)
+			right.createEl("div", { text: file.name })
+				.onClickEvent(async ()=> {await this.app.workspace.getLeaf().openFile(file);});
+	});
 }

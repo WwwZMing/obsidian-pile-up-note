@@ -1,11 +1,11 @@
 {
-	"id": "obsidian-to-anki",
-	"name": "Obsidian2Anki plugin",
+	"id": "obsidian-pile-up-note",
+	"name": "Obsidian Reminder Pile",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
+	"description": "It's a practice project. I want to remind myself to review the note files I didn't review seven days ago.",
 	"author": "WwwZming",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"authorUrl": "https://github.com/WwwZMing",
+	"fundingUrl": "",
 	"isDesktopOnly": false
 }

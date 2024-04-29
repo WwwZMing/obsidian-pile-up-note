@@ -1,4 +1,4 @@
-import { App, ItemView, Modal, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
+import { App, ItemView, Modal, Plugin, TFile, WorkspaceLeaf, PluginManifest, Vault } from 'obsidian';
 
 const VIEW_Note_List = "My-view";
 
@@ -11,16 +11,16 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 }
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
-	static fileList: TFile[];
-	async onload() {
+	async load() {
 		await this.loadSettings();
-		MyPlugin.fileList = this.app.vault.getMarkdownFiles();
+		this.registerEvent(this.app.workspace.on('file-open', () => {
+			new MyModal(this.app).open()
+		}));
 		this.registerView(
 			VIEW_Note_List,
 			(leaf) => new MyView(leaf)
 		);
-		new MyModal(this.app).open();
-
+		
 		const ribbonIconEl = this.addRibbonIcon('dice', 'History', (_evt: MouseEvent) => {
 			this.activateView();
 		});
@@ -36,10 +36,11 @@ export default class MyPlugin extends Plugin {
 		});
 	}
 
+
+	
 	onunload() {
 
 	}
-
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
@@ -75,7 +76,7 @@ class MyModal extends Modal {
 	onOpen() {
 		Render(this.contentEl);
 	}
-	onClose() {
+	async onClose() {
 		const { contentEl } = this;
 		contentEl.empty();
 	}
@@ -105,11 +106,12 @@ class MyView extends ItemView {
 }
 
 export function Render(contentEl: HTMLElement): void {
+	let fileList: TFile[] = this.app.vault.getMarkdownFiles();
 	const left = contentEl.createEl("div");
 	left.createEl("div", { text: "最近7天创建的笔记：" ,cls:"Create"});
 	const right = contentEl.createEl("div");
 	right.createEl("div", { text: "最近7天更新的笔记：" ,cls:"Modify"});
-	MyPlugin.fileList.forEach((file)=> {
+	fileList.forEach((file)=> {
 		const standard = Date.now();
 		if (standard - file.stat.ctime <= 604800000)
 			left.createEl("div", { text: file.name })

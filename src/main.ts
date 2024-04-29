@@ -1,4 +1,4 @@
-import { App, ItemView, Modal, Plugin, TFile, WorkspaceLeaf, PluginManifest, Vault } from 'obsidian';
+import { App, ItemView, Modal, Plugin, TFile, WorkspaceLeaf, PluginManifest, Vault, EventRef} from 'obsidian';
 
 const VIEW_Note_List = "My-view";
 
@@ -11,16 +11,15 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 }
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
-	async load() {
+	async onload() {
 		await this.loadSettings();
-		this.registerEvent(this.app.workspace.on('file-open', () => {
-			new MyModal(this.app).open()
-		}));
 		this.registerView(
 			VIEW_Note_List,
 			(leaf) => new MyView(leaf)
 		);
-		
+		this.app.workspace.onLayoutReady(() => {
+			new MyModal(this.app).open();
+		});
 		const ribbonIconEl = this.addRibbonIcon('dice', 'History', (_evt: MouseEvent) => {
 			this.activateView();
 		});
@@ -36,15 +35,12 @@ export default class MyPlugin extends Plugin {
 		});
 	}
 
-
 	
 	onunload() {
-
 	}
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
-
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
@@ -64,6 +60,9 @@ export default class MyPlugin extends Plugin {
 		if (leaf)
 			workspace.revealLeaf(leaf);
 	}
+	async showModal(){
+		await new MyModal(this.app).onOpen();
+	}
 }
 
 
@@ -73,12 +72,26 @@ class MyModal extends Modal {
 		super(app);
 	}
 
-	onOpen() {
-		Render(this.contentEl);
+	async onOpen() {
+		let fileList: TFile[] = this.app.vault.getMarkdownFiles();
+		const left = this.contentEl.createEl("div");
+		left.createEl("div", { text: "最近7天创建的笔记：", cls: "Create" });
+		const right = this.contentEl.createEl("div");
+		right.createEl("div", { text: "最近7天更新的笔记：", cls: "Modify" });
+		fileList.forEach((file) => {
+			const standard = Date.now();
+			if (standard - file.stat.ctime <= 604800000)
+				left.createEl("div", { text: file.name })
+					.onClickEvent(async () => { await this.app.workspace.getLeaf().openFile(file); });
+			if (standard - file.stat.mtime >= 604800000)
+				right.createEl("div", { text: file.name })
+					.onClickEvent(async () => { await this.app.workspace.getLeaf().openFile(file); });
+		});
 	}
 	async onClose() {
 		const { contentEl } = this;
 		contentEl.empty();
+		
 	}
 }
 
